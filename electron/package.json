@@ -1,0 +1,10 @@
+{
+  "name": "bloxdforge-desktop",
+  "productName": "BloxdForge",
+  "version": "2.0.0",
+  "description": "BloxdForge Community Edition desktop app",
+  "author": "khrotu",
+  "license": "Apache-2.0",
+  "main": "main.js",
+  "private": true
+}

@@ -46,3 +46,13 @@ next-env.d.ts
 .vscode
 .swc
 priv/
+# desktop app
+/dist/
+/dist-server/
+
+# unpacked assets (from public/*.7z)
+/public/environment/
+/public/fonts/
+/public/lib/
+/public/textures/
+/public/vb/
