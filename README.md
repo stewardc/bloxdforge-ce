@@ -21,7 +21,7 @@ npm ci
 brew install sevenzip && npm run unpack-assets   # once; see public/README.md
 npm run desktop:prepare                          # next build + assemble dist-server/
 npm run desktop:dev                              # run it in Electron (unpackaged)
-CSC_NAME="<signing identity>" npx electron-builder --mac   # signed .app/.dmg/.zip in dist/
+CSC_NAME="<signing identity>" npm run desktop:dist   # build + sign .app/.dmg/.zip in dist/
 ```
 
 - Builds are arm64 only. The bundled `sharp` binary is arm64.
