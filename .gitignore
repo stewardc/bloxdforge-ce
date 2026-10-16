@@ -26,6 +26,7 @@
 
 # generated data
 data/scripts-list.json
+data/textures.txt
 
 # debug
 npm-debug.log*

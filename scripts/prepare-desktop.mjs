@@ -18,6 +18,11 @@ for (const dir of ["lib", "vb", "textures", "environment", "fonts"]) {
   }
 }
 
+if (!existsSync(path.join(root, "data", "textures.txt"))) {
+  console.error("Missing data/textures.txt. Run `npm run unpack-assets` first.");
+  process.exit(1);
+}
+
 rmSync(out, { recursive: true, force: true });
 cpSync(standalone, out, { recursive: true, verbatimSymlinks: true });
 cpSync(path.join(root, ".next", "static"), path.join(out, ".next", "static"), { recursive: true });

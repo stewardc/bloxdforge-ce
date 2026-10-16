@@ -12,3 +12,8 @@ for f in environment fonts lib textures vb; do
   "$SEVENZIP" x -y "$f.7z" >/dev/null
   echo "Unpacked $f.7z"
 done
+
+# The texture name index behind the New File autocomplete (/api/data/textures.txt).
+mkdir -p ../data
+ls textures/default/textures | sed -n 's/\.png$//p' | sort > ../data/textures.txt
+echo "Wrote data/textures.txt"
