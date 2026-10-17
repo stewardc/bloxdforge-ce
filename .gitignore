@@ -28,6 +28,13 @@
 data/scripts-list.json
 data/textures.txt
 
+# private workshop exports (not for redistribution; bundled into local builds when present)
+data/builds.json
+data/scripts.json
+data/texturepacks.json
+data/textures.json
+data/assets/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

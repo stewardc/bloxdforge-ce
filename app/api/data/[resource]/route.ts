@@ -17,7 +17,12 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { isWorkshopResource, readWorkshopData } from '@/lib/workshop-data';
 export const revalidate = false;
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000',
+  'CDN-Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000'
+};
 export function generateStaticParams() {
   return [
     { resource: 'builds' },
@@ -32,6 +37,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ resource
   const { resource } = await params;
   const safeResource = resource.replace(/[^a-zA-Z0-9._-]/g, '');
   try {
+    if (safeResource === 'scripts-list' || isWorkshopResource(safeResource)) {
+      const items = safeResource === 'scripts-list'
+        ? (await readWorkshopData<{ code?: string }>('scripts')).map((script) => {
+            const listed = { ...script };
+            delete listed.code;
+            return listed;
+          })
+        : await readWorkshopData(safeResource);
+      if (items.length === 0) {
+        return new NextResponse('Not found', { status: 404 });
+      }
+      return NextResponse.json(items, { headers: CACHE_HEADERS });
+    }
     const extensions = ['.json', '.txt', ''];
     let fileBytes: Uint8Array<ArrayBuffer> | null = null;
     let contentType = 'application/octet-stream';
@@ -52,11 +70,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ resource
       return new NextResponse('Not found', { status: 404 });
     }
     return new NextResponse(fileBytes, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000',
-        'CDN-Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000'
-      }
+      headers: { ...CACHE_HEADERS, 'Content-Type': contentType }
     });
   } catch {
     return new NextResponse('Internal Error', { status: 500 });

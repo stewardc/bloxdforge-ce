@@ -30,4 +30,21 @@ cpSync(path.join(root, "public"), path.join(out, "public"), {
   recursive: true,
   filter: (src) => !src.endsWith(".7z"),
 });
+// The workshop exports are private and gitignored, so ship them only when present.
+// Copied explicitly rather than relying on output file tracing to pick them up.
+for (const file of ["builds.json", "scripts.json", "texturepacks.json", "textures.json"]) {
+  const src = path.join(root, "data", file);
+  if (existsSync(src)) {
+    cpSync(src, path.join(out, "data", file));
+    console.log(`Bundled data/${file}`);
+  }
+}
+const assets = path.join(root, "data", "assets");
+if (existsSync(assets)) {
+  cpSync(assets, path.join(out, "data", "assets"), {
+    recursive: true,
+    filter: (src) => !src.endsWith(".part") && !src.endsWith(".tmp"),
+  });
+  console.log("Bundled data/assets/");
+}
 console.log(`Prepared ${path.relative(root, out)}/`);

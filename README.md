@@ -21,10 +21,12 @@ npm ci
 brew install sevenzip && npm run unpack-assets   # once; see public/README.md
 npm run desktop:prepare                          # next build + assemble dist-server/
 npm run desktop:dev                              # run it in Electron (unpackaged)
-CSC_NAME="<signing identity>" npm run desktop:dist   # build + sign .app/.dmg/.zip in dist/
+APPLE_API_KEY=/path/AuthKey_<KeyID>.p8 APPLE_API_KEY_ID=<KeyID> APPLE_API_ISSUER=<issuer-uuid> \
+  CSC_NAME="<name> (<TeamID>)" npm run desktop:dist  # build, sign + notarize .app/.dmg/.zip in dist/
 ```
 
 - Builds are arm64 only. The bundled `sharp` binary is arm64.
-- `CSC_NAME` is a codesigning identity from `security find-identity -v -p codesigning`. Use an Apple Development or Developer ID certificate, or a self-signed code-signing certificate. The app is not notarized, so on the target Mac run `xattr -dr com.apple.quarantine /Applications/BloxdForge.app` once.
-- **Santa:** every executable in the bundle (the main app, four Electron helpers, and crashpad) is signed with the same certificate. A single TeamID rule, or a CERTIFICATE rule using the leaf certificate's SHA-256, covers all of them. SigningID rules would need one rule per executable.
+- `CSC_NAME` is a Developer ID Application identity from `security find-identity -v -p codesigning`, without the `Developer ID Application:` prefix (electron-builder rejects it).
+- Notarization uses an App Store Connect API key (Users and Access → Integrations → Team Keys, Developer role). Notarized builds open on other Macs without clearing quarantine.
+- **Santa:** every executable in the bundle (the main app, four Electron helpers, and crashpad) is signed with the same certificate. A single TeamID rule, or a CERTIFICATE rule using the leaf certificate's SHA-256, covers all of them. SigningID rules would need one rule per executable. TeamID and SigningID rules only match production (Developer ID) signatures, not Apple Development ones.
 - Server logs are written to `~/Library/Logs/BloxdForge/server.log`.

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Offlined workshop files (scripts/offline-assets.mjs) are multiple GB; the
+  // desktop build copies them itself instead of letting file tracing do it.
+  outputFileTracingExcludes: { '*': ['data/assets/**'] },
   compress: true,
   experimental: {
     staleTimes: {

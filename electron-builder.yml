@@ -37,7 +37,13 @@ mac:
   gatekeeperAssess: false
   entitlements: electron/build/entitlements.mac.plist
   entitlementsInherit: electron/build/entitlements.mac.plist
+  # osx-sign runs codesign on every non-text file, one at a time. The assets
+  # and public files are images, zips and schematics, not code, so skip them;
+  # the app's resource seal still covers them.
+  signIgnore:
+    - "/Contents/Resources/server/data/"
+    - "/Contents/Resources/server/public/"
   # Signing identity comes from the CSC_NAME env var (see README).
-  notarize: false
+  notarize: true
 dmg:
   title: BloxdForge
