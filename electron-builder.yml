@@ -1,0 +1,49 @@
+appId: com.whatsupfv.bloxdforge
+productName: BloxdForge
+copyright: Copyright © 2026 khrotu
+directories:
+  app: electron
+  output: dist
+  buildResources: electron/build
+npmRebuild: false
+# The app dir (electron/) has no dependencies. Without this, electron-builder
+# falls back to the root node_modules and bundles the whole web toolchain.
+files:
+  - main.js
+  - package.json
+  - "!node_modules/**"
+# electron-builder's default filters drop dot-dirs and node_modules from
+# extraResources, so the standalone server's .next/ and node_modules/ are
+# listed explicitly.
+extraResources:
+  - from: dist-server
+    to: server
+    filter: ["**/*"]
+  - from: dist-server/.next
+    to: server/.next
+    filter: ["**/*"]
+  - from: dist-server/node_modules
+    to: server/node_modules
+    filter: ["**/*"]
+mac:
+  category: public.app-category.developer-tools
+  icon: electron/build/icon.png
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: electron/build/entitlements.mac.plist
+  entitlementsInherit: electron/build/entitlements.mac.plist
+  # osx-sign runs codesign on every non-text file, one at a time. The assets
+  # and public files are images, zips and schematics, not code, so skip them;
+  # the app's resource seal still covers them.
+  signIgnore:
+    - "/Contents/Resources/server/data/"
+    - "/Contents/Resources/server/public/"
+  # Signing identity comes from the CSC_NAME env var (see README).
+  notarize: true
+dmg:
+  title: BloxdForge

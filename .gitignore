@@ -26,6 +26,14 @@
 
 # generated data
 data/scripts-list.json
+data/textures.txt
+
+# private workshop exports (not for redistribution; bundled into local builds when present)
+data/builds.json
+data/scripts.json
+data/texturepacks.json
+data/textures.json
+data/assets/
 
 # debug
 npm-debug.log*
@@ -46,3 +54,13 @@ next-env.d.ts
 .vscode
 .swc
 priv/
+# desktop app
+/dist/
+/dist-server/
+
+# unpacked assets (from public/*.7z)
+/public/environment/
+/public/fonts/
+/public/lib/
+/public/textures/
+/public/vb/

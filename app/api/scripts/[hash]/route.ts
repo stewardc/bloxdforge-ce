@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { readWorkshopData } from '@/lib/workshop-data';
 export const dynamic = 'force-static';
 export const revalidate = false;
 interface ScriptItem {
@@ -13,15 +12,7 @@ interface ScriptItem {
   author: string;
   tags: string[];
 }
-let cachedScripts: ScriptItem[] | null = null;
-async function getScripts(): Promise<ScriptItem[]> {
-  if (!cachedScripts) {
-    const scriptsPath = path.join(process.cwd(), 'data/scripts.json');
-    const scriptsFile = await fs.readFile(scriptsPath, 'utf-8');
-    cachedScripts = JSON.parse(scriptsFile);
-  }
-  return cachedScripts!;
-}
+const getScripts = () => readWorkshopData<ScriptItem>('scripts');
 export async function generateStaticParams() {
   try {
     const scripts = await getScripts();
@@ -52,4 +43,4 @@ export async function GET(
     console.error('API Error in /api/scripts/[hash]:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}

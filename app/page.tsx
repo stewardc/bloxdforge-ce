@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 
-import fs from "fs/promises";
-import path from "path";
+import { readWorkshopData } from "@/lib/workshop-data";
 import LandingPageClient from "./LandingPageClient";
 import { WorkshopItem } from "@/components/landing/WorkshopMarquee";
 export const dynamic = 'force-static';
@@ -27,17 +26,11 @@ async function getLandingPageData() {
     workshopRows: [[], [], []] as WorkshopItem[][]
   };
   try {
-    const buildsPath = path.join(process.cwd(), "data/builds.json");
-    const texturesPath = path.join(process.cwd(), "data/textures.json");
-    const scriptsPath = path.join(process.cwd(), "data/scripts.json");
-    const [buildsFile, texturesFile, scriptsFile] = await Promise.all([
-      fs.readFile(buildsPath, "utf-8").catch(() => "[]"),
-      fs.readFile(texturesPath, "utf-8").catch(() => "[]"),
-      fs.readFile(scriptsPath, "utf-8").catch(() => "[]"),
+    const [buildsData, texturesData, scriptsData] = await Promise.all([
+      readWorkshopData<{ name: string; author: string; url: string }>("builds"),
+      readWorkshopData<{ name: string; author?: string; file: string }>("textures"),
+      readWorkshopData<{ title: string; author: string; hash?: string; code?: string }>("scripts"),
     ]);
-    const buildsData = JSON.parse(buildsFile);
-    const texturesData = JSON.parse(texturesFile);
-    const scriptsData = JSON.parse(scriptsFile);
     const colors = ["bg-red-500", "bg-blue-500", "bg-green-500", "bg-purple-500", "bg-yellow-500", "bg-orange-500"];
     const sampleBuilds = buildsData.slice(0, 15);
     const sampleTextures = texturesData.slice(0, 15);

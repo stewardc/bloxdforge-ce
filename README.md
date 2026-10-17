@@ -11,3 +11,22 @@ BloxdForge Community Edition (khrotu) is licensed under the Apache License, Vers
 Voxel Builder (nimadez) is licensed under the GNU General Public License, Version 3.0.
 
 Monaco Editor (Microsoft) is licensed under the MIT License.
+
+## macOS desktop app
+
+The repo can be packaged as a signed macOS app with Electron. The app runs the Next.js standalone server inside an Electron utility process, bound to `127.0.0.1:38917`. The port is fixed so that saved projects and settings, which live in IndexedDB and localStorage, survive restarts.
+
+```sh
+npm ci
+brew install sevenzip && npm run unpack-assets   # once; see public/README.md
+npm run desktop:prepare                          # next build + assemble dist-server/
+npm run desktop:dev                              # run it in Electron (unpackaged)
+APPLE_API_KEY=/path/AuthKey_<KeyID>.p8 APPLE_API_KEY_ID=<KeyID> APPLE_API_ISSUER=<issuer-uuid> \
+  CSC_NAME="<name> (<TeamID>)" npm run desktop:dist  # build, sign + notarize .app/.dmg/.zip in dist/
+```
+
+- Builds are arm64 only. The bundled `sharp` binary is arm64.
+- `CSC_NAME` is a Developer ID Application identity from `security find-identity -v -p codesigning`, without the `Developer ID Application:` prefix (electron-builder rejects it).
+- Notarization uses an App Store Connect API key (Users and Access → Integrations → Team Keys, Developer role). Notarized builds open on other Macs without clearing quarantine.
+- **Santa:** every executable in the bundle (the main app, four Electron helpers, and crashpad) is signed with the same certificate. A single TeamID rule, or a CERTIFICATE rule using the leaf certificate's SHA-256, covers all of them. SigningID rules would need one rule per executable. TeamID and SigningID rules only match production (Developer ID) signatures, not Apple Development ones.
+- Server logs are written to `~/Library/Logs/BloxdForge/server.log`.

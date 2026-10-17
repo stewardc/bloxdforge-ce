@@ -21,7 +21,14 @@ const eslintConfig = [
       "scripts/",
       "public/lib/monaco/**",
       "public/vb/**",
+      "dist/**",
+      "dist-server/**",
     ],
+  },
+  {
+    // Electron main process is plain CommonJS.
+    files: ["electron/**/*.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
   },
 ];
 
