@@ -15,7 +15,12 @@ const WORKSHOP_FILES: Record<string, string[]> = {
 };
 const URL_FIELDS = ['url', 'file', 'img'];
 
-export const ASSETS_DIR = path.join(process.cwd(), 'data', 'assets');
+// The desktop app keeps the multi-GB asset folder outside its signed bundle and
+// passes its location in BLOXDFORGE_ASSETS_DIR. The turbopackIgnore comments keep
+// output file tracing from copying the folder (or the whole project) into the build.
+export const ASSETS_DIR = process.env.BLOXDFORGE_ASSETS_DIR
+  ? path.resolve(/* turbopackIgnore: true */ process.env.BLOXDFORGE_ASSETS_DIR)
+  : path.join(/* turbopackIgnore: true */ process.cwd(), 'data', 'assets');
 export const ASSETS_ROUTE = '/workshop-assets';
 
 const cache = new Map<string, unknown[]>();
@@ -23,12 +28,12 @@ let localAssets: Promise<Map<string, string>> | null = null;
 
 function loadLocalAssets(): Promise<Map<string, string>> {
   localAssets ??= fs
-    .readFile(path.join(ASSETS_DIR, 'manifest.json'), 'utf-8')
+    .readFile(path.join(/* turbopackIgnore: true */ ASSETS_DIR, 'manifest.json'), 'utf-8')
     .then((raw) => {
       const manifest = JSON.parse(raw) as Record<string, { file?: string }>;
       const map = new Map<string, string>();
       for (const [url, entry] of Object.entries(manifest)) {
-        if (entry.file && existsSync(path.join(ASSETS_DIR, entry.file))) {
+        if (entry.file && existsSync(path.join(/* turbopackIgnore: true */ ASSETS_DIR, entry.file))) {
           map.set(url, `${ASSETS_ROUTE}/${entry.file.split(path.sep).map(encodeURIComponent).join('/')}`);
         }
       }

@@ -19,7 +19,7 @@ const CONTENT_TYPES: Record<string, string> = {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await params;
-  const filePath = path.resolve(ASSETS_DIR, ...segments);
+  const filePath = path.resolve(/* turbopackIgnore: true */ ASSETS_DIR, ...segments);
   if (!filePath.startsWith(ASSETS_DIR + path.sep) || path.basename(filePath) === 'manifest.json') {
     return new Response('Not found', { status: 404 });
   }

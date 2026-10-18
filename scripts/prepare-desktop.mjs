@@ -39,12 +39,8 @@ for (const file of ["builds.json", "scripts.json", "texturepacks.json", "texture
     console.log(`Bundled data/${file}`);
   }
 }
-const assets = path.join(root, "data", "assets");
-if (existsSync(assets)) {
-  cpSync(assets, path.join(out, "data", "assets"), {
-    recursive: true,
-    filter: (src) => !src.endsWith(".part") && !src.endsWith(".tmp"),
-  });
-  console.log("Bundled data/assets/");
-}
+// data/assets/ is not bundled: it ships separately via `npm run desktop:assets`.
+// Turbopack ignores outputFileTracingExcludes and traces it in through the
+// dynamic data/ reads in app/api/data, so drop it here.
+rmSync(path.join(out, "data", "assets"), { recursive: true, force: true });
 console.log(`Prepared ${path.relative(root, out)}/`);

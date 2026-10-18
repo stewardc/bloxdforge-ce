@@ -21,9 +21,12 @@ npm ci
 brew install sevenzip && npm run unpack-assets   # once; see public/README.md
 npm run desktop:prepare                          # next build + assemble dist-server/
 npm run desktop:dev                              # run it in Electron (unpackaged)
+npm run desktop:assets                           # optional: pack data/assets/ into dist/BloxdForge-Assets.zip
 APPLE_API_KEY=/path/AuthKey_<KeyID>.p8 APPLE_API_KEY_ID=<KeyID> APPLE_API_ISSUER=<issuer-uuid> \
-  CSC_NAME="<name> (<TeamID>)" npm run desktop:dist  # build, sign + notarize .app/.dmg/.zip in dist/
+  CSC_NAME="<name> (<TeamID>)" npm run desktop:dist  # build, sign + notarize .app/.dmg in dist/
 ```
+
+- Workshop assets (`data/assets/`, from `scripts/offline-assets.mjs`) are not signed into the app; at several GB they made notarization take hours. If `dist/BloxdForge-Assets.zip` exists when `desktop:dist` runs, the DMG carries it next to the app. On first launch the app finds the zip (on the mounted DMG, in Downloads or on the Desktop) and offers to install it into `~/Library/Application Support/BloxdForge/assets`; **File → Install Workshop Assets…** does the same later. Without the assets, the workshop falls back to the original remote URLs.
 
 - Builds are arm64 only. The bundled `sharp` binary is arm64.
 - `CSC_NAME` is a Developer ID Application identity from `security find-identity -v -p codesigning`, without the `Developer ID Application:` prefix (electron-builder rejects it).

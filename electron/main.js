@@ -1,6 +1,7 @@
 // BloxdForge desktop shell: runs the bundled Next.js standalone server in an
 // Electron utility process and shows it in a window.
-const { app, BrowserWindow, dialog, desktopCapturer, session, shell, utilityProcess } = require("electron");
+const { app, BrowserWindow, Menu, dialog, desktopCapturer, session, shell, utilityProcess } = require("electron");
+const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
 const net = require("node:net");
@@ -13,6 +14,7 @@ const HOST = "127.0.0.1";
 const PORT = Number(process.env.BLOXDFORGE_PORT) || 38917;
 const ORIGIN = `http://${HOST}:${PORT}`;
 const START_PATH = "/studio";
+const ASSETS_ZIP = "BloxdForge-Assets.zip";
 const ALLOWED_PERMISSIONS = new Set([
   "clipboard-read",
   "clipboard-sanitized-write",
@@ -28,6 +30,143 @@ function serverDir() {
   return app.isPackaged
     ? path.join(process.resourcesPath, "server")
     : path.join(__dirname, "..", "dist-server");
+}
+
+// Workshop assets are too large to sign and notarize inside the app, so they're
+// installed separately (BloxdForge-Assets.zip). Unpackaged runs use the repo copy.
+function assetsDir() {
+  return app.isPackaged
+    ? path.join(app.getPath("userData"), "assets")
+    : path.join(__dirname, "..", "data", "assets");
+}
+
+function assetsInstalled() {
+  return fs.existsSync(path.join(assetsDir(), "manifest.json"));
+}
+
+// Checks where the zip usually is: the mounted BloxdForge DMG, Downloads, Desktop.
+function findAssetsZip() {
+  let volumes = [];
+  try {
+    volumes = fs.readdirSync("/Volumes").map((name) => path.join("/Volumes", name));
+  } catch {
+    // No /Volumes; fall through to the user folders.
+  }
+  return [...volumes, app.getPath("downloads"), app.getPath("desktop")]
+    .map((dir) => path.join(dir, ASSETS_ZIP))
+    .find((file) => fs.existsSync(file));
+}
+
+// Extracts into a staging folder first so a failed or partial install never
+// replaces a working one.
+async function extractAssets(zipPath) {
+  const target = assetsDir();
+  const staging = `${target}.installing`;
+  fs.rmSync(staging, { recursive: true, force: true });
+  fs.mkdirSync(staging, { recursive: true });
+  try {
+    await new Promise((resolve, reject) => {
+      execFile("/usr/bin/ditto", ["-x", "-k", zipPath, staging], (err) => (err ? reject(err) : resolve()));
+    });
+    const extracted = path.join(staging, "assets");
+    if (!fs.existsSync(path.join(extracted, "manifest.json"))) {
+      throw new Error(`${path.basename(zipPath)} is not a BloxdForge workshop assets archive.`);
+    }
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.renameSync(extracted, target);
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
+}
+
+function showStatusWindow(message) {
+  const win = new BrowserWindow({
+    width: 420,
+    height: 120,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    closable: false,
+    backgroundColor: "#0a0a0a",
+    title: "BloxdForge",
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
+  });
+  const html = `<body style="margin:0;height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#ddd;font:14px -apple-system,sans-serif">${message}</body>`;
+  win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  return win;
+}
+
+async function installAssets(zipPath) {
+  const status = showStatusWindow("Installing workshop assets\u2026 this takes a minute or two.");
+  try {
+    await extractAssets(zipPath);
+    return true;
+  } catch (err) {
+    dialog.showErrorBox("BloxdForge", `Couldn't install workshop assets.\n\n${err.message || err}`);
+    return false;
+  } finally {
+    status.destroy();
+  }
+}
+
+// On launch, offers to install the assets zip if it's lying around (for example
+// on the DMG it came with) and the assets aren't installed yet.
+async function offerAssetsInstall() {
+  if (!app.isPackaged || assetsInstalled()) return;
+  const zipPath = findAssetsZip();
+  if (!zipPath) return;
+  const { response } = await dialog.showMessageBox({
+    type: "question",
+    buttons: ["Install", "Not Now"],
+    defaultId: 0,
+    cancelId: 1,
+    message: "Install workshop assets?",
+    detail: `Found ${zipPath}.\n\nThis copies about 4 GB and takes a minute or two. Without the assets, the workshop loads files from the internet. You can also install them later from File > Install Workshop Assets.`,
+  });
+  if (response === 0) await installAssets(zipPath);
+}
+
+// File > Install Workshop Assets: the server caches the asset list, so it's
+// restarted after installing.
+async function importAssets() {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: "Install Workshop Assets",
+    defaultPath: findAssetsZip() ?? app.getPath("downloads"),
+    filters: [{ name: "BloxdForge workshop assets", extensions: ["zip"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths.length) return;
+  await stopServer();
+  await installAssets(filePaths[0]);
+  startServer();
+  try {
+    await waitForServer(30000);
+  } catch (err) {
+    dialog.showErrorBox("BloxdForge", String(err.message || err));
+    app.quit();
+    return;
+  }
+  if (mainWindow) mainWindow.reload();
+}
+
+function buildMenu() {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      { role: "appMenu" },
+      {
+        label: "File",
+        submenu: [
+          // Unpackaged runs read the repo's data/assets, which this would overwrite.
+          { label: "Install Workshop Assets\u2026", enabled: app.isPackaged, click: () => importAssets() },
+          { type: "separator" },
+          { role: "close" },
+        ],
+      },
+      { role: "editMenu" },
+      { role: "viewMenu" },
+      { role: "windowMenu" },
+    ]),
+  );
 }
 
 function isPortFree(port) {
@@ -62,7 +201,7 @@ function startServer() {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   const log = fs.createWriteStream(logPath, { flags: "w" });
 
-  server = utilityProcess.fork(path.join(dir, "server.js"), [], {
+  const proc = utilityProcess.fork(path.join(dir, "server.js"), [], {
     cwd: dir,
     serviceName: "BloxdForge Server",
     stdio: "pipe",
@@ -72,16 +211,30 @@ function startServer() {
       NEXT_TELEMETRY_DISABLED: "1",
       HOSTNAME: HOST,
       PORT: String(PORT),
+      BLOXDFORGE_ASSETS_DIR: assetsDir(),
     },
   });
-  server.stdout.pipe(log);
-  server.stderr.pipe(log);
-  server.on("exit", (code) => {
+  server = proc;
+  proc.stdout.pipe(log);
+  proc.stderr.pipe(log);
+  proc.on("exit", (code) => {
+    // stopServer() clears `server` first, so a deliberate stop isn't reported.
+    if (server !== proc) return;
     server = null;
     if (!quitting) {
       dialog.showErrorBox("BloxdForge", `The app server stopped unexpectedly (code ${code}).\n\nLog: ${logPath}`);
       app.quit();
     }
+  });
+}
+
+function stopServer() {
+  const proc = server;
+  if (!proc) return Promise.resolve();
+  server = null;
+  return new Promise((resolve) => {
+    proc.once("exit", resolve);
+    proc.kill();
   });
 }
 
@@ -174,6 +327,8 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     configureSession();
+    buildMenu();
+    await offerAssetsInstall();
     startServer();
     try {
       await waitForServer(30000);

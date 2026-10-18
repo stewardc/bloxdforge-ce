@@ -13,7 +13,8 @@
     "unpack-assets": "sh scripts/unpack-assets.sh",
     "desktop:prepare": "next build --turbopack && node scripts/prepare-desktop.mjs",
     "desktop:dev": "electron electron",
-    "desktop:dist": "npm run desktop:prepare && electron-builder --mac"
+    "desktop:dist": "npm run desktop:prepare && electron-builder --mac",
+    "desktop:assets": "mkdir -p dist && rm -f dist/BloxdForge-Assets.zip && cd data && zip -0 -qr ../dist/BloxdForge-Assets.zip assets -x '*.part' '*.tmp'"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.1",
